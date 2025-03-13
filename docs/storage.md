@@ -36,12 +36,12 @@ A Prometheus server's data directory looks something like this:
 ./data
 ├── 01BKGV7JBM69T2G1BGBGM6KB12
 │   └── meta.json
-├── 01BKGTZQ1SYQJTR4PB43C8PD98
-│   ├── chunks
-│   │   └── 000001
-│   ├── tombstones
-│   ├── index
-│   └── meta.json
+├── 01BKGTZQ1SYQJTR4PB43C8PD98  --two-hour block
+│   ├── chunks            --sample-data chunks
+│   │   └── 000001        --segment file(up to 512MB)
+│   ├── tombstones        --deletion records
+│   ├── index             --index metric names and lables
+│   └── meta.json         --meta data file
 ├── 01BKGTZQ1HHWHV8FBJXW1Y3W0K
 │   └── meta.json
 ├── 01BKGV7JC0RY8A6MACW02A2PJD
@@ -50,10 +50,10 @@ A Prometheus server's data directory looks something like this:
 │   ├── tombstones
 │   ├── index
 │   └── meta.json
-├── chunks_head
+├── chunks_head                 --head chunk ，处理最近写入的数据
 │   └── 000001
-└── wal
-    ├── 000000002
+└── wal                         --WAL files
+    ├── 000000002            --up to 128MB each segment, mimimum of three
     └── checkpoint.00000001
         └── 00000000
 ```

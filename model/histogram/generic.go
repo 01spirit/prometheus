@@ -21,9 +21,9 @@ import (
 )
 
 const (
-	ExponentialSchemaMax int32 = 8
-	ExponentialSchemaMin int32 = -4
-	CustomBucketsSchema  int32 = -53
+	ExponentialSchemaMax int32 = 8   //这个变量定义了指数直方图的最大值。指数直方图是一种用于存储和查询指标分布的数据结构，它使用指数级数的桶来存储数据，以便更有效地表示变化范围广泛的数据
+	ExponentialSchemaMin int32 = -4  //这个变量定义了指数直方图的最小值。它与ExponentialSchemaMax一起确定了直方图的覆盖范围，允许Prometheus在存储和查询时更灵活地处理数据
+	CustomBucketsSchema  int32 = -53 //表示使用自定义桶（buckets）模式的直方图。在这种模式下，用户可以定义一组特定的桶边界，而不是使用预设的指数级数桶。这允许更精细地控制数据的分布和聚合方式
 )
 
 var (
@@ -39,27 +39,31 @@ var (
 	ErrHistogramsIncompatibleBounds   = errors.New("cannot apply this operation on custom buckets histograms with different custom bounds")
 )
 
+// 是否自定义桶模式
 func IsCustomBucketsSchema(s int32) bool {
 	return s == CustomBucketsSchema
 }
 
+// 是否是指数直方图模式
 func IsExponentialSchema(s int32) bool {
 	return s >= ExponentialSchemaMin && s <= ExponentialSchemaMax
 }
 
 // BucketCount is a type constraint for the count in a bucket, which can be
 // float64 (for type FloatHistogram) or uint64 (for type Histogram).
+// 桶内的计数
 type BucketCount interface {
-	float64 | uint64
+	float64 | uint64 // 类型约束，可以是其中之一
 }
 
 // InternalBucketCount is used internally by Histogram and FloatHistogram. The
-// difference to the BucketCount above is that Histogram internally uses deltas
+// difference to the BucketCount above is that Histogram internally uses deltas		Histogram 内部的 bucket 之间使用增量而不是绝对数量；FloatHistogram 使用绝对数量
 // between buckets rather than absolute counts (while FloatHistogram uses
 // absolute counts directly). Go type parameters don't allow type
 // specialization. Therefore, where special treatment of deltas between buckets
 // vs. absolute counts is important, this information has to be provided as a
 // separate boolean parameter "deltaBuckets".
+// 内部实现的桶内的计数，因为两种直方图的技术方法不同，不能用 BucketCount
 type InternalBucketCount interface {
 	float64 | int64
 }
@@ -71,18 +75,19 @@ type InternalBucketCount interface {
 //
 // To represent cumulative buckets, Lower is set to -Inf, and the Count is then
 // cumulative (including the counts of all buckets for smaller values).
-type Bucket[BC BucketCount] struct {
-	Lower, Upper                   float64
-	LowerInclusive, UpperInclusive bool
-	Count                          BC
+type Bucket[BC BucketCount] struct { // 泛型结构体，接收类型参数 BC
+	Lower, Upper                   float64 // 上边界和下边界
+	LowerInclusive, UpperInclusive bool    // 边界是否包含
+	Count                          BC      // 桶内计数，绝对数量，累计所有比他小的桶的计数
 
 	// Index within schema. To easily compare buckets that share the same
 	// schema and sign (positive or negative). Irrelevant for the zero bucket.
-	Index int32
+	Index int32 // 桶在模式Schema内的索引
 }
 
 // strippedBucket is Bucket without bound values (which are expensive to calculate
 // and not used in certain use cases).
+// 简化的桶，没有边界信息，因为某些场景不需要
 type strippedBucket[BC BucketCount] struct {
 	count BC
 	index int32
@@ -91,6 +96,7 @@ type strippedBucket[BC BucketCount] struct {
 // String returns a string representation of a Bucket, using the usual
 // mathematical notation of '['/']' for inclusive bounds and '('/')' for
 // non-inclusive bounds.
+// [lb,ub)Count
 func (b Bucket[BC]) String() string {
 	var sb strings.Builder
 	if b.LowerInclusive {
@@ -121,16 +127,17 @@ type BucketIterator[BC BucketCount] interface {
 // implementations, together with an implementation of the At method. This
 // iterator can be embedded in full implementations of BucketIterator to save on
 // code replication.
+// 基本的桶迭代器，能嵌入其他迭代器的定义中
 type baseBucketIterator[BC BucketCount, IBC InternalBucketCount] struct {
-	schema  int32
-	spans   []Span
-	buckets []IBC
+	schema  int32  // 桶模式
+	spans   []Span // 桶的区间
+	buckets []IBC  // 内部桶
 
 	positive bool // Whether this is for positive buckets.
 
-	spansIdx   int    // Current span within spans slice.
+	spansIdx   int    // Current span within spans slice.	// 区间序号
 	idxInSpan  uint32 // Index in the current span. 0 <= idxInSpan < span.Length.
-	bucketsIdx int    // Current bucket within buckets slice.
+	bucketsIdx int    // Current bucket within buckets slice.	// 桶序号
 
 	currCount IBC   // Count in the current bucket.
 	currIdx   int32 // The actual bucket index.

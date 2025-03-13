@@ -18,14 +18,16 @@ import (
 	"path/filepath"
 )
 
+// 统计该目录下的所有文件（不包括该目录下的目录）的字节数
 func DirSize(dir string) (int64, error) {
 	var size int64
+	// 遍历目录下的文件，为每个文件调用函数
 	err := filepath.Walk(dir, func(filePath string, info os.FileInfo, err error) error {
 		if err != nil {
 			return err
 		}
 		if !info.IsDir() {
-			size += info.Size()
+			size += info.Size() // 若当前路径不是目录，统计该文件中的字节数
 		}
 		return nil
 	})

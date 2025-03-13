@@ -43,6 +43,7 @@ type DirLocker struct {
 }
 
 // NewDirLocker creates a DirLocker that can obtain an exclusive lock on dir.
+// 为文件维护一个互斥锁
 func NewDirLocker(dir, subsystem string, l log.Logger, r prometheus.Registerer) (*DirLocker, error) {
 	lock := &DirLocker{
 		logger: l,
@@ -90,6 +91,7 @@ func (l *DirLocker) Lock() error {
 }
 
 // Release releases the lock. No-op if the lock is not held.
+// 释放目录锁
 func (l *DirLocker) Release() error {
 	if l.releaser == nil {
 		return nil

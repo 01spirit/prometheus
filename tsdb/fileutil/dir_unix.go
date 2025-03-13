@@ -19,4 +19,5 @@ package fileutil
 import "os"
 
 // OpenDir opens a directory for syncing.
+// 以只读权限打开文件
 func OpenDir(path string) (*os.File, error) { return os.Open(path) }

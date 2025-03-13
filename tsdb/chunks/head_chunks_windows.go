@@ -15,4 +15,6 @@ package chunks
 
 // HeadChunkFilePreallocationSize is the size to which the m-map file should be preallocated when a new file is cut.
 // Windows needs pre-allocation to m-map the file.
+// windows 系统上需要定义新切分的内存映射文件（HeadChunk）应该预分配的大小，是 head chunk 文件的最大空间
+// 128 MB
 var HeadChunkFilePreallocationSize int64 = MaxHeadChunkFileSize

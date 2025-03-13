@@ -11,12 +11,12 @@ in-file offset (lower 4 bytes) and segment sequence number (upper 4 bytes).
 ┌──────────────────────────────┐
 │  magic(0x85BD40DD) <4 byte>  │
 ├──────────────────────────────┤
-│    version(1) <1 byte>       │
-├──────────────────────────────┤
-│    padding(0) <3 byte>       │
+│    version(1) <1 byte>       │  
+├──────────────────────────────┤  
+│    padding(0) <3 byte>       │  填充字节
 ├──────────────────────────────┤
 │ ┌──────────────────────────┐ │
-│ │         Chunk 1          │ │
+│ │         Chunk 1          │ │  数据段
 │ ├──────────────────────────┤ │
 │ │          ...             │ │
 │ ├──────────────────────────┤ │
@@ -24,6 +24,11 @@ in-file offset (lower 4 bytes) and segment sequence number (upper 4 bytes).
 │ └──────────────────────────┘ │
 └──────────────────────────────┘
 ```
+
+每个block存放2小时的数据，数据分段存放在 chuncks/ 目录下，
+每个段文件最大512MB；
+
+chunks的 uint64索引：低四位是文件内偏移量，高四位是段序列号
 
 
 # Chunk
@@ -35,7 +40,7 @@ in-file offset (lower 4 bytes) and segment sequence number (upper 4 bytes).
 ```
 
 Notes:
-* `<uvarint>` has 1 to 10 bytes.
+* `<uvarint>` has 1 to 10 bytes(实际定义的该字段最大长度是 5 byte).      uvarint 是一种用于编码无符号整数的可变长度编码方法
 * `encoding`: Currently either `XOR` or `histogram`.
 * `data`: See below for each encoding.
 
@@ -56,10 +61,12 @@ Notes:
 * `ts_1_delta` is `ts_1` – `ts_0`.
 * `ts_n_dod` is the “delta of deltas” of timestamps, i.e. (`ts_n` – `ts_n-1`) – (`ts_n-1` – `ts_n-2`).
 * `v_n_xor` is the result of `v_n` XOR `v_n-1`.
-* `<varbit_xor>` is a specific variable bitwidth encoding of the result of XORing the current and the previous value. It has between 1 bit and 77 bits.
-  See [code for details](https://github.com/prometheus/prometheus/blob/7309c20e7e5774e7838f183ec97c65baa4362edc/tsdb/chunkenc/xor.go#L220-L253).
+  * `<varbit_xor>` is a specific variable bitwidth encoding of the result of XORing the current and the previous value. It has between 1 bit and 77 bits.\
+  bit 0 表示 v_n == v_n-1，只有一位；bit 1，bit 1（有5 bit表示前导零），5 bit 前导零，6 bit 有效位数，64 bit 异或delta数据，共 77 bit（最差情况） \
+    See [code for details](https://github.com/prometheus/prometheus/blob/7309c20e7e5774e7838f183ec97c65baa4362edc/tsdb/chunkenc/xor.go#L220-L253).
 * `<varbit_ts>` is a specific variable bitwidth encoding for the “delta of deltas” of timestamps (signed integers that are ideally small).
-  It has between 1 and 68 bits.
+  It has between 1 and 68 bits. \
+  bit 0 表示 dod 和前一个相等，只有一位（最好情况）; 0b1111 （4位，表示时间戳不能压缩，只能有 64 bit 表示），64 bit 时间戳dod，共68 bit （最差情况）
   see [code for details](https://github.com/prometheus/prometheus/blob/7309c20e7e5774e7838f183ec97c65baa4362edc/tsdb/chunkenc/xor.go#L179-L205).
 * `padding` of 0 to 7 bits so that the whole chunk data is byte-aligned.
 * The chunk can have as few as one sample, i.e. `ts_1`, `v_1`, etc. are optional.
@@ -140,5 +147,11 @@ Notes:
   See [code for details](https://github.com/prometheus/prometheus/blob/8c1507ebaa4ca552958ffb60c2d1b21afb7150e4/tsdb/chunkenc/histogram.go#L538-L574).
 * `padding` of 0 to 7 bits so that the whole chunk data is byte-aligned.
 * Note that buckets are inherently deltas between the current bucket and the previous bucket. Only `bucket_0` is an absolute count.
-* The chunk can have as few as one sample, i.e. sample 1 and following are optional.
-* Similarly, there could be down to zero spans and down to zero buckets.
+* The chunk can have as few as one sample, i.e. sample 1 and following are optional.  chunck里面可以只有一个sample取样数据
+* Similarly, there could be down to zero spans and down to zero buckets.  span和bucket的数量都可以为零
+
+`span`和`bucket`是与直方图`Histogram`相关的两个概念：\
+**span：**\
+直方图中用于表示数据分布的区间 \
+**bucket:**\
+存储直方图的一定范围内的观测值数量；bucket有一个上界，所有小于等于上界的观测值都会计入该bucket

@@ -96,14 +96,17 @@ func (s indexWriterStage) String() string {
 // The table gets initialized with sync.Once but may still cause a race
 // with any other use of the crc32 package anywhere. Thus we initialize it
 // before.
+// 存储CRC32算法的查找表，查找表用于优化哈希计算，基于特定的多项式 crc32.Castagnoli
 var castagnoliTable *crc32.Table
 
+// init 是一个特殊的函数，它在包初始化时自动被调用，即在程序启动时或包被加载时，计算数据的哈希值
 func init() {
-	castagnoliTable = crc32.MakeTable(crc32.Castagnoli)
+	castagnoliTable = crc32.MakeTable(crc32.Castagnoli) // 初始化 crc32 查找表
 }
 
 // newCRC32 initializes a CRC32 hash with a preconfigured polynomial, so the
 // polynomial may be easily changed in one location at a later time, if necessary.
+// 返回一个新的 hash.Hash32 类型的对象，它使用了一个预配置的多项式来初始化CRC32哈希。 这样每个通过 newCRC32 创建的哈希对象都会使用相同的预配置多项式，不需要重新计算查找表
 func newCRC32() hash.Hash32 {
 	return crc32.New(castagnoliTable)
 }
@@ -1094,11 +1097,14 @@ func (w *Writer) Close() error {
 }
 
 // StringIter iterates over a sorted list of strings.
+// 用于迭代一个有序的字符串列表
 type StringIter interface {
 	// Next advances the iterator and returns true if another value was found.
+	// 向前迭代，若有值则返回 true
 	Next() bool
 
 	// At returns the value at the current iterator position.
+	// 返回迭代器当前位置的值
 	At() string
 
 	// Err returns the last error of the iterator.

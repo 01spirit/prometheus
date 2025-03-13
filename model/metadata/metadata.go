@@ -16,8 +16,9 @@ package metadata
 import "github.com/prometheus/common/model"
 
 // Metadata stores a series' metadata information.
+// 时间序列的元数据信息
 type Metadata struct {
-	Type model.MetricType `json:"type"`
+	Type model.MetricType `json:"type"` // 指标类型（仪表读数 Gauge， 直方图 Histogram 等）
 	Unit string           `json:"unit"`
 	Help string           `json:"help"`
 }

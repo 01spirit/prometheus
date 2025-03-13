@@ -15,14 +15,17 @@ package fileutil
 
 import "syscall"
 
+// windows 系统的文件锁
 type windowsLock struct {
 	fd syscall.Handle
 }
 
+// 释放文件锁：关闭文件，实现了 Releaser 接口
 func (fl *windowsLock) Release() error {
 	return syscall.Close(fl.fd)
 }
 
+// 为文件加锁，返回文件的 Releaser
 func newLock(fileName string) (Releaser, error) {
 	pathp, err := syscall.UTF16PtrFromString(fileName)
 	if err != nil {

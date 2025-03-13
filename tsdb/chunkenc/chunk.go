@@ -21,13 +21,13 @@ import (
 	"github.com/prometheus/prometheus/model/histogram"
 )
 
-// Encoding is the identifier for a chunk encoding.
+// Encoding is the identifier for a chunk encoding.  chunk的编码方式，如下4个常量（none、XOR（float），两种直方图数据编码）
 type Encoding uint8
 
 // The different available chunk encodings.
 const (
 	EncNone Encoding = iota
-	EncXOR
+	EncXOR           // float 编码方式
 	EncHistogram
 	EncFloatHistogram
 )
@@ -46,13 +46,13 @@ func (e Encoding) String() string {
 	return "<unknown>"
 }
 
-// IsValidEncoding returns true for supported encodings.
+// IsValidEncoding returns true for supported encodings.	编码方式是否有效
 func IsValidEncoding(e Encoding) bool {
 	return e == EncXOR || e == EncHistogram || e == EncFloatHistogram
 }
 
 const (
-	// MaxBytesPerXORChunk is the maximum size an XOR chunk can be.
+	// MaxBytesPerXORChunk is the maximum size an XOR chunk can be.	采用 XOR 编码的 chunk 最多有 1024 bytes
 	MaxBytesPerXORChunk = 1024
 	// TargetBytesPerHistogramChunk sets a size target for each histogram chunk.
 	TargetBytesPerHistogramChunk = 1024
@@ -66,40 +66,42 @@ const (
 )
 
 // Chunk holds a sequence of sample pairs that can be iterated over and appended to.
+// Chunk 中存储了一系列 sample pair，可以迭代或添加
 type Chunk interface {
+	// Iterable 接口, chunk 需要实现其中的迭代器方法
 	Iterable
 
-	// Bytes returns the underlying byte slice of the chunk.
+	// Bytes returns the underlying byte slice of the chunk.	返回 chunk 中的字节数据
 	Bytes() []byte
 
-	// Encoding returns the encoding type of the chunk.
+	// Encoding returns the encoding type of the chunk.	chunk 的编码方式（XOR、直方图）
 	Encoding() Encoding
 
-	// Appender returns an appender to append samples to the chunk.
+	// Appender returns an appender to append samples to the chunk.		添加器,向chunk的流的末尾添加数据
 	Appender() (Appender, error)
 
-	// NumSamples returns the number of samples in the chunk.
+	// NumSamples returns the number of samples in the chunk.	chunk 中的 sample 数量
 	NumSamples() int
 
-	// Compact is called whenever a chunk is expected to be complete (no more
+	// Compact is called whenever a chunk is expected to be complete (no more	chunk 中不再添加数据之后进行压缩
 	// samples appended) and the underlying implementation can eventually
 	// optimize the chunk.
 	// There's no strong guarantee that no samples will be appended once
 	// Compact() is called. Implementing this function is optional.
 	Compact()
 
-	// Reset resets the chunk given stream.
+	// Reset resets the chunk given stream.	用给定的字节流重置 chunk
 	Reset(stream []byte)
 }
 
 type Iterable interface {
 	// The iterator passed as argument is for re-use.
 	// Depending on implementation, the iterator can
-	// be re-used or a new iterator can be allocated.
+	// be re-used or a new iterator can be allocated.  迭代器接口
 	Iterator(Iterator) Iterator
 }
 
-// Appender adds sample pairs to a chunk.
+// Appender adds sample pairs to a chunk.	添加器，向 chunk 中添加 sample
 type Appender interface {
 	Append(int64, float64)
 
@@ -119,20 +121,21 @@ type Appender interface {
 }
 
 // Iterator is a simple iterator that can only get the next value.
-// Iterator iterates over the samples of a time series, in timestamp-increasing order.
+// Iterator iterates over the samples of a time series, in timestamp-increasing order.	迭代器，按时间升序迭代 TS 中的 sample
+// 要实现 Iterable 接口的话，首先要实现 iterator 接口，创建迭代器类型
 type Iterator interface {
 	// Next advances the iterator by one and returns the type of the value
-	// at the new position (or ValNone if the iterator is exhausted).
+	// at the new position (or ValNone if the iterator is exhausted).	迭代器前进一位，返回新的位置的值的类型（float、histogram）
 	Next() ValueType
 	// Seek advances the iterator forward to the first sample with a
 	// timestamp equal or greater than t. If the current sample found by a
 	// previous `Next` or `Seek` operation already has this property, Seek
 	// has no effect. If a sample has been found, Seek returns the type of
 	// its value. Otherwise, it returns ValNone, after which the iterator is
-	// exhausted.
+	// exhausted.																迭代找到时间戳 >= 给定值的首个 sample；若当前时间戳满足条件，无影响；找到之后返回值的类型；迭代到末尾没找到就返回 ValNone 类型
 	Seek(t int64) ValueType
 	// At returns the current timestamp/value pair if the value is a float.
-	// Before the iterator has advanced, the behaviour is unspecified.
+	// Before the iterator has advanced, the behaviour is unspecified.		若当前值是 float，返回当前 timestamp-value pair
 	At() (int64, float64)
 	// AtHistogram returns the current timestamp/value pair if the value is a
 	// histogram with integer counts. Before the iterator has advanced, the behaviour
@@ -149,14 +152,14 @@ type Iterator interface {
 	// reused when not nil. Otherwise, a new FloatHistogram object will be allocated.
 	AtFloatHistogram(*histogram.FloatHistogram) (int64, *histogram.FloatHistogram)
 	// AtT returns the current timestamp.
-	// Before the iterator has advanced, the behaviour is unspecified.
+	// Before the iterator has advanced, the behaviour is unspecified.		返回当前时间戳
 	AtT() int64
 	// Err returns the current error. It should be used only after the
 	// iterator is exhausted, i.e. `Next` or `Seek` have returned ValNone.
 	Err() error
 }
 
-// ValueType defines the type of a value an Iterator points to.
+// ValueType defines the type of a value an Iterator points to.	迭代器指向的值的类型，四种（None、float、两种histogram）
 type ValueType uint8
 
 // Possible values for ValueType.
@@ -182,6 +185,7 @@ func (v ValueType) String() string {
 	}
 }
 
+// ChunkEncoding 返回该类型值对应的编码方式
 func (v ValueType) ChunkEncoding() Encoding {
 	switch v {
 	case ValFloat:
@@ -195,6 +199,7 @@ func (v ValueType) ChunkEncoding() Encoding {
 	}
 }
 
+// NewChunk 初始化一个该类型值对应的 chunk
 func (v ValueType) NewChunk() (Chunk, error) {
 	switch v {
 	case ValFloat:
@@ -208,7 +213,7 @@ func (v ValueType) NewChunk() (Chunk, error) {
 	}
 }
 
-// MockSeriesIterator returns an iterator for a mock series with custom timeStamps and values.
+// MockSeriesIterator returns an iterator for a mock series with custom timeStamps and values.	用假数据模拟的迭代器
 func MockSeriesIterator(timestamps []int64, values []float64) Iterator {
 	return &mockSeriesIterator{
 		timeStamps: timestamps,
@@ -217,14 +222,17 @@ func MockSeriesIterator(timestamps []int64, values []float64) Iterator {
 	}
 }
 
+// 模拟 Samples数组，和迭代器
 type mockSeriesIterator struct {
 	timeStamps []int64
 	values     []float64
 	currIndex  int
 }
 
+// 模拟数据，无类型
 func (it *mockSeriesIterator) Seek(int64) ValueType { return ValNone }
 
+// 迭代器 currIndex 指向的 sample 数据
 func (it *mockSeriesIterator) At() (int64, float64) {
 	return it.timeStamps[it.currIndex], it.values[it.currIndex]
 }
@@ -237,10 +245,12 @@ func (it *mockSeriesIterator) AtFloatHistogram(*histogram.FloatHistogram) (int64
 	return math.MinInt64, nil
 }
 
+// 当前的时间戳
 func (it *mockSeriesIterator) AtT() int64 {
 	return it.timeStamps[it.currIndex]
 }
 
+// 迭代器前移，返回当前值的类型，若结束返回 none
 func (it *mockSeriesIterator) Next() ValueType {
 	if it.currIndex < len(it.timeStamps)-1 {
 		it.currIndex++
@@ -256,6 +266,7 @@ func NewNopIterator() Iterator {
 	return nopIterator{}
 }
 
+// 无操作，返回无效的默认值，在没有实际数据或不需要具体操作时使用
 type nopIterator struct{}
 
 func (nopIterator) Next() ValueType      { return ValNone }
@@ -272,19 +283,20 @@ func (nopIterator) AtT() int64 { return math.MinInt64 }
 func (nopIterator) Err() error { return nil }
 
 // Pool is used to create and reuse chunk references to avoid allocations.
+// 创建和复用 chunk reference，避免分配操作
 type Pool interface {
 	Put(Chunk) error
 	Get(e Encoding, b []byte) (Chunk, error)
 }
 
-// pool is a memory pool of chunk objects.
+// pool is a memory pool of chunk objects.	chunk 对象的内存池，实现了 Pool 接口
 type pool struct {
 	xor            sync.Pool
 	histogram      sync.Pool
 	floatHistogram sync.Pool
 }
 
-// NewPool returns a new pool.
+// NewPool returns a new pool.	Pool中存放了 chunk 的地址
 func NewPool() Pool {
 	return &pool{
 		xor: sync.Pool{
@@ -305,6 +317,7 @@ func NewPool() Pool {
 	}
 }
 
+// Get 根据编码方式获取相应的 chunk 的地址，用指定字节流重置 chunk
 func (p *pool) Get(e Encoding, b []byte) (Chunk, error) {
 	var c Chunk
 	switch e {
@@ -322,6 +335,7 @@ func (p *pool) Get(e Encoding, b []byte) (Chunk, error) {
 	return c, nil
 }
 
+// Put 把 chunk 放入对应的 pool 中
 func (p *pool) Put(c Chunk) error {
 	var sp *sync.Pool
 	var ok bool
@@ -351,8 +365,8 @@ func (p *pool) Put(c Chunk) error {
 }
 
 // FromData returns a chunk from a byte slice of chunk data.
-// This is there so that users of the library can easily create chunks from
-// bytes.
+// This is there so that users of the library can easily create chunks from bytes.
+// 用指定的编码方式和字节流创建一个 chunk
 func FromData(e Encoding, d []byte) (Chunk, error) {
 	switch e {
 	case EncXOR:
@@ -365,7 +379,7 @@ func FromData(e Encoding, d []byte) (Chunk, error) {
 	return nil, fmt.Errorf("invalid chunk encoding %q", e)
 }
 
-// NewEmptyChunk returns an empty chunk for the given encoding.
+// NewEmptyChunk returns an empty chunk for the given encoding.	用给定的编码方式创建一个新 chunk
 func NewEmptyChunk(e Encoding) (Chunk, error) {
 	switch e {
 	case EncXOR:

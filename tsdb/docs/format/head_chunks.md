@@ -37,3 +37,7 @@ is used while replaying the chunks.
 | series ref <8 byte> | mint <8 byte, uint64> | maxt <8 byte, uint64> | encoding <1 byte> | len <uvarint> | data <bytes> │ CRC32 <4 byte> │
 └─────────────────────┴───────────────────────┴───────────────────────┴───────────────────┴───────────────┴──────────────┴────────────────┘
 ```
+
+
+head chunk用于处理最近写入的数据。数据写入时会首先进入内存中的head chunk。head chunk随着新数据写入而增长，达到一定大小或时间范围之后，被冻结并写入磁盘，同时创建一个新的head chunk接收新数据\
+head chunk中的数据在内存中，便于快速访问；把写满的head chunk写入磁盘并用内存映射（mmap）技术；数据写入磁盘可以被压缩

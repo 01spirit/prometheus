@@ -1,5 +1,9 @@
 # WAL Disk Format
 
+预写日志组织为序号连续的段，每个段默认限制为128MB。一个段以32KB的页面写入，只有最新段的最后一个页面可以是不完整的。
+一个WAL record是不透明的字节数组，如果超过了当前页面的剩余空间，会被划分为子记录（sub-records）。
+记录不会跨越段的边界分割。如果单个记录超过了段的默认大小，会创建更大的段。
+
 The write ahead log operates in segments that are numbered and sequential,
 e.g. `000000`, `000001`, `000002`, etc., and are limited to 128MB by default.
 A segment is written to in pages of 32KB. Only the last page of the most recent segment

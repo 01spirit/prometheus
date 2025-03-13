@@ -37,6 +37,7 @@ func BenchmarkXorRead(b *testing.B) {
 		it = c.Iterator(it)
 		for it.Next() != ValNone {
 			ts, v = it.At()
+			//fmt.Println(ts, v)
 		}
 		_, _ = ts, v
 	}

@@ -20,10 +20,12 @@ import (
 	"syscall"
 )
 
+// unix 系统的文件锁
 type unixLock struct {
 	f *os.File
 }
 
+// 实现了 Releaser 接口
 func (l *unixLock) Release() error {
 	if err := l.set(false); err != nil {
 		return err
@@ -31,6 +33,7 @@ func (l *unixLock) Release() error {
 	return l.f.Close()
 }
 
+// 设置锁的状态
 func (l *unixLock) set(lock bool) error {
 	how := syscall.LOCK_UN
 	if lock {
@@ -39,6 +42,7 @@ func (l *unixLock) set(lock bool) error {
 	return syscall.Flock(int(l.f.Fd()), how|syscall.LOCK_NB)
 }
 
+// 为文件加锁
 func newLock(fileName string) (Releaser, error) {
 	f, err := os.OpenFile(fileName, os.O_RDWR|os.O_CREATE, 0o666)
 	if err != nil {

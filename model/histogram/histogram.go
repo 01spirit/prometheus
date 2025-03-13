@@ -31,7 +31,7 @@ const (
 	GaugeType                                   // GaugeType means this is a gauge histogram, where counter resets do not happen.
 )
 
-// Histogram encodes a sparse, high-resolution histogram. See the design
+// Histogram encodes a sparse, high-resolution histogram. See the design	稀疏的高分辨率直方图
 // document for full details:
 // https://docs.google.com/document/d/1cLNv3aufPZb3fNfaJgdaRBZsInZKKIHo9E6HinJVbpM/edit#
 //
@@ -48,20 +48,20 @@ const (
 // Which bucket indices are actually used is determined by the spans.
 type Histogram struct {
 	// Counter reset information.
-	CounterResetHint CounterResetHint
-	// Currently valid schema numbers are -4 <= n <= 8 for exponential buckets,
+	CounterResetHint CounterResetHint // 计数重置标记
+	// Currently valid schema numbers are -4 <= n <= 8 for exponential buckets,			指数桶的模式数是 [-4,8]，以 2 为底，1 是桶边界
 	// They are all for base-2 bucket schemas, where 1 is a bucket boundary in
-	// each case, and then each power of two is divided into 2^n logarithmic buckets.
+	// each case, and then each power of two is divided into 2^n logarithmic buckets.	指数桶的描述
 	// Or in other words, each bucket boundary is the previous boundary times
 	// 2^(2^-n). Another valid schema number is -53 for custom buckets, defined by
 	// the CustomValues field.
-	Schema int32
+	Schema int32 // 桶模式选择 指数桶 或 自定义（-53）
 	// Width of the zero bucket.
-	ZeroThreshold float64
+	ZeroThreshold float64 // 零号桶的宽度
 	// Observations falling into the zero bucket.
-	ZeroCount uint64
+	ZeroCount uint64 // 零号桶中的观察计数
 	// Total number of observations.
-	Count uint64
+	Count uint64 // 总计数
 	// Sum of observations. This is also used as the stale marker.
 	Sum float64
 	// Spans for positive and negative buckets (see Span below).
@@ -82,9 +82,9 @@ type Histogram struct {
 type Span struct {
 	// Gap to previous span (always positive), or starting index for the 1st
 	// span (which can be negative).
-	Offset int32
+	Offset int32 // 与前一个的间隔
 	// Length of the span.
-	Length uint32
+	Length uint32 // 区间长度
 }
 
 func (h *Histogram) UsesCustomBuckets() bool {

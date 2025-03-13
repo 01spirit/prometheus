@@ -1,5 +1,7 @@
 # Memory Snapshot Format
 
+备份内存中的数据和删除记录，用于系统崩溃后的数据恢复
+
 Memory snapshot uses the WAL package and writes each series as a WAL record.
 Below are the formats of the individual records.
 

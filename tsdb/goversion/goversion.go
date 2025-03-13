@@ -13,6 +13,9 @@
 
 //go:build go1.12
 
+// 上面这行是 构建标签 build tags，在源代码文件中以注释的形式出现，或在命令行中以参数的形式提供，告诉编译器在编译时要满足的条件
+// 这里要求 go 的版本在 1.12 及以上才能编译这段代码，否则会跳过，可能会报错，运行时无影响
+
 // Package goversion enforces the go version supported by the tsdb module.
 package goversion
 

@@ -31,6 +31,7 @@ func NewDuplicateFloatErr(t int64, existing, newValue float64) error {
 }
 
 // NewDuplicateHistogramToFloatErr describes an error where a new float sample is sent for same timestamp as previous histogram.
+// Histogram 数据时间戳重复
 func NewDuplicateHistogramToFloatErr(t int64, newValue float64) error {
 	return errDuplicateSampleForTimestamp{
 		timestamp:           t,

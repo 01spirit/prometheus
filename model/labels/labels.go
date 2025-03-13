@@ -25,14 +25,16 @@ import (
 
 // Labels is a sorted set of labels. Order has to be guaranteed upon
 // instantiation.
+// 排好序的标签对
 type Labels []Label
 
 func (ls Labels) Len() int           { return len(ls) }
-func (ls Labels) Swap(i, j int)      { ls[i], ls[j] = ls[j], ls[i] }
-func (ls Labels) Less(i, j int) bool { return ls[i].Name < ls[j].Name }
+func (ls Labels) Swap(i, j int)      { ls[i], ls[j] = ls[j], ls[i] }    // 交换下标对应的标签在数组中的位置
+func (ls Labels) Less(i, j int) bool { return ls[i].Name < ls[j].Name } // 用 name 比较两个下标对应的标签
 
 // Bytes returns ls as a byte slice.
 // It uses an byte invalid character as a separator and so should not be used for printing.
+// 返回 Labels 数组的字节流形式，name 和 value 用特殊分隔符分开
 func (ls Labels) Bytes(buf []byte) []byte {
 	b := bytes.NewBuffer(buf[:0])
 	b.WriteByte(labelSep)
@@ -49,6 +51,7 @@ func (ls Labels) Bytes(buf []byte) []byte {
 
 // MatchLabels returns a subset of Labels that matches/does not match with the provided label names based on the 'on' boolean.
 // If on is set to true, it returns the subset of labels that match with the provided label names and its inverse when 'on' is set to false.
+// 返回所有匹配 names 数组的 Label
 func (ls Labels) MatchLabels(on bool, names ...string) Labels {
 	matchedLabels := Labels{}
 
@@ -68,6 +71,7 @@ func (ls Labels) MatchLabels(on bool, names ...string) Labels {
 
 // Hash returns a hash value for the label set.
 // Note: the result is not guaranteed to be consistent across different runs of Prometheus.
+// 返回 Labels 数组的 hash 值
 func (ls Labels) Hash() uint64 {
 	// Use xxhash.Sum64(b) for fast path as it's faster.
 	b := make([]byte, 0, 1024)
@@ -95,6 +99,7 @@ func (ls Labels) Hash() uint64 {
 
 // HashForLabels returns a hash value for the labels matching the provided names.
 // 'names' have to be sorted in ascending order.
+// 返回指定标签的 hash 值，names 升序排列
 func (ls Labels) HashForLabels(b []byte, names ...string) (uint64, []byte) {
 	b = b[:0]
 	i, j := 0, 0
@@ -119,6 +124,7 @@ func (ls Labels) HashForLabels(b []byte, names ...string) (uint64, []byte) {
 // HashWithoutLabels returns a hash value for all labels except those matching
 // the provided names.
 // 'names' have to be sorted in ascending order.
+// 返回指定标签以外的 hash 值，names 升序排列
 func (ls Labels) HashWithoutLabels(b []byte, names ...string) (uint64, []byte) {
 	b = b[:0]
 	j := 0
@@ -139,6 +145,7 @@ func (ls Labels) HashWithoutLabels(b []byte, names ...string) (uint64, []byte) {
 
 // BytesWithLabels is just as Bytes(), but only for labels matching names.
 // 'names' have to be sorted in ascending order.
+// 返回指定的标签的字节流，names 升序排列
 func (ls Labels) BytesWithLabels(buf []byte, names ...string) []byte {
 	b := bytes.NewBuffer(buf[:0])
 	b.WriteByte(labelSep)
@@ -165,6 +172,7 @@ func (ls Labels) BytesWithLabels(buf []byte, names ...string) []byte {
 
 // BytesWithoutLabels is just as Bytes(), but only for labels not matching names.
 // 'names' have to be sorted in ascending order.
+// 返回指定标签以外的字节流，names 升序
 func (ls Labels) BytesWithoutLabels(buf []byte, names ...string) []byte {
 	b := bytes.NewBuffer(buf[:0])
 	b.WriteByte(labelSep)
@@ -187,6 +195,7 @@ func (ls Labels) BytesWithoutLabels(buf []byte, names ...string) []byte {
 }
 
 // Copy returns a copy of the labels.
+// 返回切片的复制
 func (ls Labels) Copy() Labels {
 	res := make(Labels, len(ls))
 	copy(res, ls)
@@ -195,6 +204,7 @@ func (ls Labels) Copy() Labels {
 
 // Get returns the value for the label with the given name.
 // Returns an empty string if the label doesn't exist.
+// Get name->value	""
 func (ls Labels) Get(name string) string {
 	for _, l := range ls {
 		if l.Name == name {
@@ -205,6 +215,7 @@ func (ls Labels) Get(name string) string {
 }
 
 // Has returns true if the label with the given name is present.
+// 是否存在该 name
 func (ls Labels) Has(name string) bool {
 	for _, l := range ls {
 		if l.Name == name {
@@ -216,6 +227,7 @@ func (ls Labels) Has(name string) bool {
 
 // HasDuplicateLabelNames returns whether ls has duplicate label names.
 // It assumes that the labelset is sorted.
+// 是否有重复的 name，Labels 需要有序
 func (ls Labels) HasDuplicateLabelNames() (string, bool) {
 	for i, l := range ls {
 		if i == 0 {
@@ -230,13 +242,15 @@ func (ls Labels) HasDuplicateLabelNames() (string, bool) {
 
 // WithoutEmpty returns the labelset without empty labels.
 // May return the same labelset.
+// 返回 value 都不为空的子集
 func (ls Labels) WithoutEmpty() Labels {
 	for _, v := range ls {
 		if v.Value != "" {
 			continue
 		}
 		// Do not copy the slice until it's necessary.
-		els := make(Labels, 0, len(ls)-1)
+		// 因为不一定存在符合条件的标签，如果在函数开始就创建切片，可能直到结束都用不到，浪费资源；直到需要切片时才创建，然后从当前位置继续循环，返回结果，外层循环不再使用
+		els := make(Labels, 0, len(ls)-1) // 直到有空值时才分配，从这里开始遍历然后退出
 		for _, v := range ls {
 			if v.Value != "" {
 				els = append(els, v)
@@ -248,6 +262,7 @@ func (ls Labels) WithoutEmpty() Labels {
 }
 
 // Equal returns whether the two label sets are equal.
+// 遍历比较所有标签是否相等
 func Equal(ls, o Labels) bool {
 	if len(ls) != len(o) {
 		return false
@@ -260,22 +275,24 @@ func Equal(ls, o Labels) bool {
 	return true
 }
 
-// EmptyLabels returns n empty Labels value, for convenience.
+// EmptyLabels returns n empty Labels value, for convenience.	返回空 Labels 结构
 func EmptyLabels() Labels {
 	return Labels{}
 }
 
 // New returns a sorted Labels from the given labels.
 // The caller has to guarantee that all label names are unique.
+// 返回按字典序升序排列的 Label 数组，输入保证 Label 是唯一的
 func New(ls ...Label) Labels {
-	set := make(Labels, 0, len(ls))
+	set := make(Labels, 0, len(ls)) // 预先声明容量为 len(ls)
 	set = append(set, ls...)
-	slices.SortFunc(set, func(a, b Label) int { return strings.Compare(a.Name, b.Name) })
+	slices.SortFunc(set, func(a, b Label) int { return strings.Compare(a.Name, b.Name) }) // 按字典序排列
 
 	return set
 }
 
 // FromStrings creates new labels from pairs of strings.
+// 用输入的多个 string 创建 Labels 并排序
 func FromStrings(ss ...string) Labels {
 	if len(ss)%2 != 0 {
 		panic("invalid number of strings")
@@ -291,6 +308,7 @@ func FromStrings(ss ...string) Labels {
 
 // Compare compares the two label sets.
 // The result will be 0 if a==b, <0 if a < b, and >0 if a > b.
+// 找到更大的 Label：比较两个 Labels 的 name 和 value，最后比较长度，a < b 返回 -1， a > b 返回 1
 func Compare(a, b Labels) int {
 	l := len(a)
 	if len(b) < l {
@@ -317,16 +335,19 @@ func Compare(a, b Labels) int {
 
 // CopyFrom copies labels from b on top of whatever was in ls previously,
 // reusing memory or expanding if needed.
+// 用给定标签覆盖原有的标签
 func (ls *Labels) CopyFrom(b Labels) {
 	(*ls) = append((*ls)[:0], b...)
 }
 
 // IsEmpty returns true if ls represents an empty set of labels.
+// 长度为零
 func (ls Labels) IsEmpty() bool {
 	return len(ls) == 0
 }
 
 // Range calls f on each label.
+// 遍历 Labels 数组的所有 Label，对其调用函数 f()
 func (ls Labels) Range(f func(l Label)) {
 	for _, l := range ls {
 		f(l)
@@ -334,6 +355,7 @@ func (ls Labels) Range(f func(l Label)) {
 }
 
 // Validate calls f on each label. If f returns a non-nil error, then it returns that error cancelling the iteration.
+// 遍历对每个 Label 调用函数 f()，进行异常处理
 func (ls Labels) Validate(f func(l Label) error) error {
 	for _, l := range ls {
 		if err := f(l); err != nil {
@@ -344,6 +366,7 @@ func (ls Labels) Validate(f func(l Label) error) error {
 }
 
 // DropMetricName returns Labels with "__name__" removed.
+// 删除 name == "__name__" 的标签
 func (ls Labels) DropMetricName() Labels {
 	for i, l := range ls {
 		if l.Name == MetricName {
@@ -374,21 +397,21 @@ func (ls Labels) ReleaseStrings(release func(string)) {
 	}
 }
 
-// Builder allows modifying Labels.
+// Builder allows modifying Labels.		用于修改 Labels 数组
 type Builder struct {
 	base Labels
 	del  []string
 	add  []Label
 }
 
-// Reset clears all current state for the builder.
+// Reset clears all current state for the builder. 清理 value 为空的标签，把 name 存入 del 数组
 func (b *Builder) Reset(base Labels) {
 	b.base = base
 	b.del = b.del[:0]
 	b.add = b.add[:0]
 	b.base.Range(func(l Label) {
 		if l.Value == "" {
-			b.del = append(b.del, l.Name)
+			b.del = append(b.del, l.Name) // 遍历，把所有空标签存入 del 数组
 		}
 	})
 }
@@ -396,22 +419,22 @@ func (b *Builder) Reset(base Labels) {
 // Labels returns the labels from the builder.
 // If no modifications were made, the original labels are returned.
 func (b *Builder) Labels() Labels {
-	if len(b.del) == 0 && len(b.add) == 0 {
+	if len(b.del) == 0 && len(b.add) == 0 { // 无修改，返回原始数组
 		return b.base
 	}
 
-	expectedSize := len(b.base) + len(b.add) - len(b.del)
+	expectedSize := len(b.base) + len(b.add) - len(b.del) // 结果数组的预期大小
 	if expectedSize < 1 {
 		expectedSize = 1
 	}
 	res := make(Labels, 0, expectedSize)
 	for _, l := range b.base {
-		if slices.Contains(b.del, l.Name) || contains(b.add, l.Name) {
+		if slices.Contains(b.del, l.Name) || contains(b.add, l.Name) { // 跳过修改过的标签
 			continue
 		}
-		res = append(res, l)
+		res = append(res, l) // 存入结果数组
 	}
-	if len(b.add) > 0 { // Base is already in order, so we only need to sort if we add to it.
+	if len(b.add) > 0 { // Base is already in order, so we only need to sort if we add to it.	// 把添加进来的标签加入结果数组，排序
 		res = append(res, b.add...)
 		slices.SortFunc(res, func(a, b Label) int { return strings.Compare(a.Name, b.Name) })
 	}
@@ -419,11 +442,12 @@ func (b *Builder) Labels() Labels {
 }
 
 // ScratchBuilder allows efficient construction of a Labels from scratch.
+// 允许从头开始高效构建标签
 type ScratchBuilder struct {
 	add Labels
 }
 
-// SymbolTable is no-op, just for api parity with dedupelabels.
+// SymbolTable is no-op, just for api parity with dedupelabels.	无操作，仅为保持 api 一致性
 type SymbolTable struct{}
 
 func NewSymbolTable() *SymbolTable { return nil }
@@ -462,6 +486,7 @@ func (b *ScratchBuilder) Add(name, value string) {
 // UnsafeAddBytes adds a name/value pair, using []byte instead of string.
 // The '-tags stringlabels' version of this function is unsafe, hence the name.
 // This version is safe - it copies the strings immediately - but we keep the same name so everything compiles.
+// 以字节流的形式传入标签对
 func (b *ScratchBuilder) UnsafeAddBytes(name, value []byte) {
 	b.add = append(b.add, Label{Name: string(name), Value: string(value)})
 }
@@ -472,12 +497,14 @@ func (b *ScratchBuilder) Sort() {
 }
 
 // Assign is for when you already have a Labels which you want this ScratchBuilder to return.
+// 用给定的 Labels 数组覆盖原有的 Labels
 func (b *ScratchBuilder) Assign(ls Labels) {
 	b.add = append(b.add[:0], ls...) // Copy on top of our slice, so we don't retain the input slice.
 }
 
 // Labels returns the name/value pairs added so far as a Labels object.
 // Note: if you want them sorted, call Sort() first.
+// 从 builder 中获取 Labels 数组，未排序
 func (b *ScratchBuilder) Labels() Labels {
 	// Copy the slice, so the next use of ScratchBuilder doesn't overwrite.
 	return append([]Label{}, b.add...)
@@ -485,6 +512,7 @@ func (b *ScratchBuilder) Labels() Labels {
 
 // Overwrite the newly-built Labels out to ls.
 // Callers must ensure that there are no other references to ls, or any strings fetched from it.
+// 把给定的 Labels 数组用 ScratchBuilder 覆盖
 func (b *ScratchBuilder) Overwrite(ls *Labels) {
 	*ls = append((*ls)[:0], b.add...)
 }

@@ -22,6 +22,7 @@ import (
 )
 
 // OpenDir opens a directory in windows with write access for syncing.
+// 以写权限打开目录
 func OpenDir(path string) (*os.File, error) {
 	fd, err := openDir(path)
 	if err != nil {
@@ -30,6 +31,7 @@ func OpenDir(path string) (*os.File, error) {
 	return os.NewFile(uintptr(fd), path), nil
 }
 
+// 调用 windows API 打开目录
 func openDir(path string) (fd syscall.Handle, err error) {
 	if len(path) == 0 {
 		return syscall.InvalidHandle, syscall.ERROR_FILE_NOT_FOUND

@@ -20,7 +20,7 @@ import (
 	"github.com/prometheus/prometheus/tsdb/chunkenc"
 )
 
-// OOOChunk maintains samples in time-ascending order.
+// OOOChunk maintains samples in time-ascending order.		Out-Of-Order
 // Inserts for timestamps already seen, are dropped.
 // Samples are stored uncompressed to allow easy sorting.
 // Perhaps we can be more efficient later.

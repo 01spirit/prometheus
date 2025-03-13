@@ -22,11 +22,12 @@ import "github.com/prometheus/prometheus/model/labels"
 const ExemplarMaxLabelSetLength = 128
 
 // Exemplar is additional information associated with a time series.
+// Exemplar 是和时间序列相关联的额外信息
 type Exemplar struct {
-	Labels labels.Labels `json:"labels"`
-	Value  float64       `json:"value"`
-	Ts     int64         `json:"timestamp"`
-	HasTs  bool
+	Labels labels.Labels `json:"labels"`    // 标签对的数组
+	Value  float64       `json:"value"`     // 时间序列的 值
+	Ts     int64         `json:"timestamp"` // 时间戳
+	HasTs  bool          // 是否拥有时间戳
 }
 
 type QueryResult struct {
@@ -39,6 +40,7 @@ type QueryResult struct {
 // when an exemplar is exported without it's own timestamp, in which case the scrape timestamp
 // is assigned to the Ts field. However we still want to treat the same exemplar, scraped without
 // an exported timestamp, as a duplicate of itself for each subsequent scrape.
+// 比较两个 Exemplar 是否相等，比较顺序： Labels -> HasTs -> Ts -> Value
 func (e Exemplar) Equals(e2 Exemplar) bool {
 	if !labels.Equal(e.Labels, e2.Labels) {
 		return false
@@ -52,6 +54,7 @@ func (e Exemplar) Equals(e2 Exemplar) bool {
 }
 
 // Compare first timestamps, then values, then labels.
+// 比较两个 Exemplar，a > b -> 1, a < b -> -1		比较顺序：Ts -> Value -> labels
 func Compare(a, b Exemplar) int {
 	if a.Ts < b.Ts {
 		return -1

@@ -7,7 +7,7 @@ or the original [go-tsz](https://github.com/dgryski/go-tsz) implementation, whic
 ## Delta-of-delta encoding for timestamps
 
 We need to be able to encode and decode dod's for timestamps, which can be positive, zero, or negative.
-Note that int64's are implemented as [2's complement](https://en.wikipedia.org/wiki/Two%27s_complement)
+Note that int64's are implemented as [2's complement](https://en.wikipedia.org/wiki/Two%27s_complement) （二进制补码）
 
 and look like:
 
@@ -37,6 +37,13 @@ and look like:
 
 All numbers have a prefix (of zeroes for positive numbers, of ones for negative numbers), followed by a number of significant digits at the end.
 In all cases, the smaller the absolute value of the number, the fewer the amount of significant digits.
+
+第一位是符号位，0正1负，后面是有效数位，绝对值越小，有效数位越少
+
+数字编码方式：
+一个前缀用于声明后面的位数（用预先定义的选项列表，按有效数位增序排列）
+比有效数位多一位的bits，额外的bit用于处理无符号整数（不完全是符号位）
+
 
 To encode these numbers, we use:
 * A prefix which declares the amount of bits that follow (we use a predefined list of options in order of increasing number of significant bits).

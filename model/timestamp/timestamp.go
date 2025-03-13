@@ -19,16 +19,19 @@ import (
 )
 
 // FromTime returns a new millisecond timestamp from a time.
+// Time 类型转换为 int64 时间戳，单位 毫秒 ms
 func FromTime(t time.Time) int64 {
 	return t.Unix()*1000 + int64(t.Nanosecond())/int64(time.Millisecond)
 }
 
 // Time returns a new time.Time object from a millisecond timestamp.
+// int64 时间戳 （单位 ms） 转化为 Time 类型
 func Time(ts int64) time.Time {
 	return time.Unix(ts/1000, (ts%1000)*int64(time.Millisecond)).UTC()
 }
 
 // FromFloatSeconds returns a millisecond timestamp from float seconds.
+// 把浮点型的 单位 秒 的时间戳转换为 int64 毫秒 时间戳
 func FromFloatSeconds(ts float64) int64 {
 	return int64(math.Round(ts * 1000))
 }
